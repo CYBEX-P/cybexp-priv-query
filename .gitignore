@@ -1,0 +1,5 @@
+env/
+venv/
+out
+secrets/*
+!secrets/keep_this_file
