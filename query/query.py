@@ -13,12 +13,11 @@ import yaml
 import re
 from dateutil import parser
 from datetime import datetime
+import pickle
 
 from pprint import pprint
 import traceback
-import pickle
 
-DEBUG_POLICY_PARCER = False
 
 def _to_bool(st):
    trues = ["t","true", "True"]
@@ -68,51 +67,54 @@ def match_re_to_keys(reg: str, keys: list):
 
 
 def encrypt_as_de(dat,key):
-   global DEBUG_POLICY_PARCER
-   if DEBUG_POLICY_PARCER:
-      return "DE_encrypted"
-   else:
-      try:
-         enc_alg = RSADOAEP(key_sz_bits=2048, rsa_pem=key)
-         dat = str(dat).encode("UTF-8")
-         return enc_alg.encrypt(dat)
-      except KeyboardInterrupt:
-         raise KeyboardInterrupt
-      except:
-         traceback.print_exc()
-         return None
+   try:
+      enc_alg = RSADOAEP(key_sz_bits=2048, rsa_pem=key)
+      dat = str(dat).encode("UTF-8")
+      return enc_alg.encrypt(dat)
+   except KeyboardInterrupt:
+      raise KeyboardInterrupt
+   except:
+      traceback.print_exc()
+      return None
 def encrypt_as_timestamp(dat,key):
-   global DEBUG_POLICY_PARCER
-   if DEBUG_POLICY_PARCER:
-      return "ORE_encrypted"
-   else:
-      try:
-         dat = _str_to_epoch(dat)
-         if type(dat) == int and dat > 0:
-            return OREComparable.from_int(dat,key).get_cipher_obj().export()
-         else:
-            return None
-      except KeyboardInterrupt:
-         raise KeyboardInterrupt
-      except:
-         traceback.print_exc()
+   try:
+      dat = _str_to_epoch(dat)
+      if type(dat) == int and dat > 0:
+         return OREComparable.from_int(dat,key).get_cipher_obj().export()
+      else:
          return None
-def encrypt_as_cpabe(dat, policy, pk):
-   global DEBUG_POLICY_PARCER
-   if DEBUG_POLICY_PARCER:
-      return "CPABE_encrypted_{}".format(policy.replace(' ',"_"))
-   else:
-      try:
-         bsw07 = CPABEAlg()
-         return bsw07.cpabe_encrypt_serialize(pk, str(dat).encode("UTF-8"), policy)
-      except KeyboardInterrupt:
-         raise KeyboardInterrupt
-      except:
-         traceback.print_exc()
-         return None
+   except KeyboardInterrupt:
+      raise KeyboardInterrupt
+   except:
+      traceback.print_exc()
+      return None
+def decrypt_cpabe(ciphertext, pk, sk):
+   try:
+      bsw07 = CPABEAlg()
+      return bsw07.cpabe_decrypt_deserialize(pk, sk, ciphertext)
+   except KeyboardInterrupt:
+      raise KeyboardInterrupt
+   except Exception:
+      # failed to decrypt
+      return None
+   except:
+      traceback.print_exc()
+      return None
 
 
+def decrypt_record(record, pk, sk, debug=False):
+   cpabe_keys = match_re_to_keys("cpabe_.*",record.keys())
+   new_record = dict()
+   for k in cpabe_keys:
+      cipher = record[k]
+      plain = pickle.loads(decrypt_cpabe(cipher, pk, sk))
+      if plain:
+         new_key = k[len("cpabe_"):]
+         new_record[new_key] = plain
+      elif debug:
+         print("Failed to decrypt({}), wrong key for policy".format(k))
 
+   return new_record
 
 
 def load_fetch_de_key(kms_url, DE_key_location):
@@ -244,6 +246,7 @@ if __name__ == "__main__":
                     }
    keychain = get_all_keys(**key_arguments)
 
+   print("sk[attribs]:", keychain["sk"]["S"])
 
    if DEBUG:
       print("#"*21 +" config " + "#"*21)
@@ -270,21 +273,27 @@ if __name__ == "__main__":
 
    try:
       enc_val = encrypt_as_de(query, keychain["de"])
-      print("enc_query:", enc_val)
-      import base64
-      print("enc_query base64:", base64.b64encode(enc_val))
+      # print("enc_query:", enc_val)
+      # import base64
+      # print("enc_query base64:", base64.b64encode(enc_val))
    except:
       traceback.print_exc()
       sys.exit("Failed to encrypt '{}'".format(query))
 
    pickled_resp_data = query_enc_data(config_collector["backend_server"]["url"], enc_val, enc_from_time, enc_to_time, debug=DEBUG)
    resp_data = pickle.loads(pickled_resp_data)
-   print("returned:")
-   pprint(pickled_resp_data)
-   print("unpickled:", resp_data)
+   if DEBUG:
+      print("returned:")
+      pprint(pickled_resp_data)
+      print("unpickled:", resp_data)
    for record in resp_data:
       
-      pprint(record)
+      # pprint(record)
+      dec_record = decrypt_record(record, keychain["pk"], keychain["sk"], debug=DEBUG)
+      # print(record["cpabe_offset"])
+
+      if dec_record != {}:
+         pprint(dec_record)
       if ONLY_ONE:
          break
 
