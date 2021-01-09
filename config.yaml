@@ -1,12 +1,43 @@
-debug: 
-  enabled: False
-  process_only_one: True
-  
+####################################
+############# Query ################
+####################################
+
+# query: "165.227.91.185"
+query: "test"
+# times in UNIX int
+from_time: 1
+to_time: 5000
+
+inclusive_left: False
+inclusive_right: False
+
+####################################
+######### Configure these ##########
+####################################
+
+# name must not contain special characters like spaces, /
+# alpha numeric only, -, _
+name: "official_org_name" 
+
 kms:
   url: "http://192.168.1.101:5002"
 backend_server:
   url: "http://192.168.1.101:5001"
   #max_post_retries: 5
+
+
+####################################
+########## Dev settings ############
+####################################
+
+debug: 
+  enabled: False
+  process_only_one: False
+  
+
+####################################
+##### no need to change below ######
+####################################
 
 key_files:
   de: /secrets/de.bin
@@ -14,13 +45,9 @@ key_files:
   cpabe_pub: /secrets/cpabe_pub.bin
   cpabe_secret: /secrets/cpabe_secret.bin
 
-# name must not contain special characters like spaces, /
-# alpha numeric only, -, _
-name: "official_org_name" 
 
 
-query: "165.227.91.185"
-# times in UNIX int
-#from_time: 
-#to_time: 
+
+
+
 

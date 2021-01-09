@@ -6,14 +6,14 @@ from de import RSADOAEP
 from ORE import *
 from cpabew import CPABEAlg
 from web_client import get_de_key, get_ore_key, get_cpabe_pub_key, get_org_cpabe_secret, query_enc_data
+from priv_common import load_yaml_file
 
-import jsonlines
 from tqdm import tqdm
-import yaml
 import re
-from dateutil import parser
+from dateutil import parser as t_parser
 from datetime import datetime
-import pickle
+import pickle, json
+import argparse
 
 from pprint import pprint
 import traceback
@@ -36,24 +36,12 @@ def _to_bool(st):
 def _str_to_epoch(some_time_str):
    # parse dates without knwoing format
    # https://stackoverflow.com/a/30468539/12044480
-   t = parser.parse(some_time_str)
+   # print(some_time_str)
+   t = t_parser.parse(some_time_str)
    unix = t.timestamp()
    print("Time:", t, "unix:",unix)
    return int(unix)
 
-def load_yaml_file(f_name):
-   with open(f_name) as f:
-      print("Loading data from {}...".format(f_name))
-      data = yaml.load(f, Loader=yaml.FullLoader)
-   return data
-
-def load_json_file(f_name):
-   with jsonlines.open(f_name) as reader:
-      print("Loading data from {}...".format(f_name))
-      dat = list()
-      for line in tqdm(reader):
-         dat.append(line["data"])
-   return dat
 
 
 def match_re_to_keys(reg: str, keys: list):
@@ -78,7 +66,10 @@ def encrypt_as_de(dat,key):
       return None
 def encrypt_as_timestamp(dat,key):
    try:
-      dat = _str_to_epoch(dat)
+      if dat == None:
+         return None
+      if type(dat) != int:
+         dat = _str_to_epoch(dat)
       if type(dat) == int and dat > 0:
          return OREComparable.from_int(dat,key).get_cipher_obj().export()
       else:
@@ -214,12 +205,45 @@ def get_all_keys(kms_url, name, DE_key_location, ORE_key_location, cpabe_pk_loca
             "sk": abe_sk
          }
 
+
+def create_parser():
+   parser = argparse.ArgumentParser(description='Ship json file to collector.')
+
+   parser.add_argument('query', metavar='QUERY', type=str,
+                       help='query in plaintext')
+
+   parser.add_argument('-f','--from-time', metavar='FROM', type=int,
+                       default=None, dest='from_time',
+                       help='integer epoch used as > filter for the query')
+
+   parser.add_argument('-t','--to-time', metavar='TO', type=int,
+                       default=None, dest='to_time',
+                       help='integer epoch used as < filter for the query')
+
+   parser.add_argument('-l','--left-inclusive', dest='left_inclusive', 
+                       default=False, action="store_true",
+                       help='modify the --from-time to be inclusive >= (default: off)')
+
+   parser.add_argument('-r','--right-inclusive', dest='right_inclusive', 
+                       default=False, action="store_true",
+                       help='modify the --to-time to be inclusive <= (default: off)')
+
+   
+   return parser
+
+
+
 if __name__ == "__main__":
    # todo: add arguemnt parser   
    #        force keep keys
    #     autoremove keys on exit
 
-   config_f_name = "./config.yaml"#sys.argv[1] 
+   parser = create_parser()
+   args = parser.parse_args()
+
+   print(sys.argv)
+   config_f_name = "/config.yaml"#sys.argv[1] 
+   output_f_name = "/output"
 
    config_collector = load_yaml_file(config_f_name)
    try:
@@ -254,23 +278,36 @@ if __name__ == "__main__":
       print("#"*50)
 
    try:
-      query = config_collector["query"]
+      # query = config_collector["query"]
+      query = args.query
       print("query:", query)
 
    except:
       sys.exit("query must be defined.")
 
    try:
-      from_time = config_collector["from_time"]
-      enc_from_time = encrypt_as_timestamp(from_time, keychain["ore"])
+      # from_time = config_collector["from_time"]
+      enc_from_time = encrypt_as_timestamp(args.from_time, keychain["ore"])
    except:
       enc_from_time = None
    try:
-      to_time = config_collector["to_time"]
-      enc_from_time = encrypt_as_timestamp(to_time, keychain["ore"])
+      # to_time = config_collector["to_time"]
+      enc_to_time = encrypt_as_timestamp(args.to_time, keychain["ore"])
    except:
       enc_to_time = None
 
+   if args.from_time or args.to_time:
+      print("where:")
+      if args.from_time:
+         if args.left_inclusive:
+            print("  t >= {}".format(args.from_time))
+         else:
+            print("  t > {}".format(args.from_time))
+      if args.to_time:
+         if args.right_inclusive:
+            print("  t >= {}".format(args.to_time))
+         else:
+            print("  t > {}".format(args.to_time))
    try:
       enc_val = encrypt_as_de(query, keychain["de"])
       # print("enc_query:", enc_val)
@@ -280,22 +317,41 @@ if __name__ == "__main__":
       traceback.print_exc()
       sys.exit("Failed to encrypt '{}'".format(query))
 
-   pickled_resp_data = query_enc_data(config_collector["backend_server"]["url"], enc_val, enc_from_time, enc_to_time, debug=DEBUG)
+   pickled_resp_data = query_enc_data(config_collector["backend_server"]["url"], 
+                           enc_val, enc_from_time, enc_to_time,
+                           args.left_inclusive,args.right_inclusive, debug=DEBUG)
+
+   if pickled_resp_data == None:
+      sys.stderr.write("Failed to query data\n")
+      sys.exit(1)
+
    resp_data = pickle.loads(pickled_resp_data)
    if DEBUG:
       print("returned:")
       pprint(pickled_resp_data)
       print("unpickled:", resp_data)
-   for record in resp_data:
-      
-      # pprint(record)
-      dec_record = decrypt_record(record, keychain["pk"], keychain["sk"], debug=DEBUG)
-      # print(record["cpabe_offset"])
 
-      if dec_record != {}:
-         pprint(dec_record)
-      if ONLY_ONE:
-         break
+   try:
+      with open(output_f_name, "w") as output_file:
+         for record in resp_data:
+            try:  
+               # pprint(record)
+               dec_record = decrypt_record(record, keychain["pk"], keychain["sk"], debug=DEBUG)
+               # print(record["cpabe_offset"])
+
+               if dec_record != {}:
+                  output_file.write(json.dumps(dec_record)+'\n')
+               if DEBUG:
+                  print(json.dumps(dec_record))
+               if ONLY_ONE:
+                  break
+            except:
+               traceback.print_exc()
+               sys.stdout.flush()
+               continue
+   except:
+      sys.stderr.write("Could not open output file.")
+      sys.exit(1)
 
 
 

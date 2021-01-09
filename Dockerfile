@@ -10,7 +10,8 @@ RUN mkdir -p /secrets
 
 # copy query,config last
 COPY ./query /query
-COPY ./config.yaml /query/config.yaml
+# COPY ./config.yaml /query/config.yaml
 
 
 WORKDIR /query
+ENTRYPOINT ["/usr/bin/python3", "-u", "/query/query.py"] 
