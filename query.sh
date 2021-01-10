@@ -9,6 +9,16 @@ DOCKERFILE_LOC=$FULL_PATH
 
 OG_ARGUMENTS="$@" # in case we need to exec when starting docker
 
+if [ "`id -u`" -eq "0" ]; then
+   echo "Not recomended to run ar root. Continuing anyways..."
+fi
+if [[ "`groups`" == *"docker"* || "`id -u`" -eq "0" ]]; then
+      DOCKER="docker"
+   else
+      DOCKER="sudo docker"
+
+fi
+
 function print_help {
    echo
    echo 'Create and run a docker container to query the encrypted backend. By default the container is left behind,'
@@ -43,7 +53,7 @@ function print_help {
 }
 
 function build_image {
-  sudo docker build -t $IMAGE_NAME $DOCKERFILE_LOC
+  $DOCKER build -t $IMAGE_NAME $DOCKERFILE_LOC
   return $?
 }
 
@@ -64,27 +74,27 @@ function run_image {
       other_args="$other_args --to-time $TO_TIME"
    fi
    echo "config file: $CONFIG_FILE"
-   CONT_ID=$(sudo docker run -d -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ -it $IMAGE_NAME $other_args)
-   sudo docker logs -f $CONT_ID
-   sudo docker cp $CONT_ID:/output `realpath $OUTPUT_FILE`   > /dev/null 2>&1 # supress output
+   CONT_ID=$($DOCKER run -d -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ -it $IMAGE_NAME $other_args)
+   $DOCKER logs -f $CONT_ID
+   $DOCKER cp $CONT_ID:/output `realpath $OUTPUT_FILE`   > /dev/null 2>&1 # supress output
    sudo chown $USER:$USER `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
    return $?
 }
 function run_shell {
    touch $OUTPUT_FILE
-   sudo docker run  -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ --entrypoint /bin/bash -it $IMAGE_NAME
-   CONT_ID=`sudo docker ps --all | grep $IMAGE_NAME | awk '{print $1}' | head -n 1`
-   sudo docker cp $CONT_ID:/output `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
-   sudo chown $USER:$USER `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress outputa
+   $DOCKER run  -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ --entrypoint /bin/bash -it $IMAGE_NAME
+   CONT_ID=`$DOCKER ps --all | grep $IMAGE_NAME | awk '{print $1}' | head -n 1`
+   $DOCKER cp $CONT_ID:/output `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
+   sudo chown $USER:$USER `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
 
    return $?
 
 }
 function remove_container {
-   DOCKER_ID=`sudo docker ps --all | grep $IMAGE_NAME | awk '{print $1}'`
+   DOCKER_ID=`$DOCKER ps --all | grep $IMAGE_NAME | awk '{print $1}'`
    echo "Stopping and removing container(s)"
-   sudo docker stop $DOCKER_ID > /dev/null 2>&1
-   sudo docker rm $DOCKER_ID #> /dev/null 2>&1
+   $DOCKER stop $DOCKER_ID > /dev/null 2>&1
+   $DOCKER rm $DOCKER_ID #> /dev/null 2>&1
    return $?
 }
 
@@ -174,7 +184,7 @@ else
    exit 2
 fi
 
-DOCKER_STATE=`sudo systemctl status docker | grep Active: | head -n 1 | awk '{print $2}'`
+DOCKER_STATE=`systemctl status docker | grep Active: | head -n 1 | awk '{print $2}'`
 
 if [ "$DOCKER_STATE" = "inactive" ]; then
    echo "Starting docker service..."
