@@ -5,7 +5,7 @@ sys.path.append("/priv-libs/libs")
 from de import RSADOAEP
 from ORE import *
 from cpabew import CPABEAlg
-from web_client import get_de_key, get_ore_key, get_cpabe_pub_key, get_org_cpabe_secret, query_enc_data
+from web_client import get_de_key, get_ore_key, get_cpabe_pub_key, get_org_cpabe_secret, query_enc_data, test_auth
 from priv_common import load_yaml_file
 
 from tqdm import tqdm
@@ -108,7 +108,7 @@ def decrypt_record(record, pk, sk, debug=False):
    return new_record
 
 
-def load_fetch_de_key(kms_url, DE_key_location):
+def load_fetch_de_key(kms_url, DE_key_location, auth=None):
    try:
       k = open(DE_key_location, "rb").read()
       return
@@ -116,7 +116,7 @@ def load_fetch_de_key(kms_url, DE_key_location):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         de_key = get_de_key(kms_url)
+         de_key = get_de_key(kms_url, auth=auth)
          if de_key == None:
             sys.exit("Could not fetch DE key from KMS server({})".format(kms_url))
          return de_key
@@ -129,7 +129,7 @@ def load_fetch_de_key(kms_url, DE_key_location):
       return 
    sys.exit("Could not load or fetch DE key")
 
-def load_fetch_ore_key(kms_url, ORE_key_location):
+def load_fetch_ore_key(kms_url, ORE_key_location, auth=None):
    try:
       k = open(ORE_key_location, "rb").read()
       return
@@ -137,7 +137,7 @@ def load_fetch_ore_key(kms_url, ORE_key_location):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         ore_key = get_ore_key(kms_url)
+         ore_key = get_ore_key(kms_url, auth=auth)
          if ore_key == None:
             sys.exit("Could not fetch ORE key from KMS server({})".format(kms_url))
          return ore_key
@@ -150,7 +150,7 @@ def load_fetch_ore_key(kms_url, ORE_key_location):
       return 
    sys.exit("Could not load or fetch ORE key")
 
-def load_fetch_cpabe_pk(kms_url, cpabe_pk_location):
+def load_fetch_cpabe_pk(kms_url, cpabe_pk_location, auth=None):
    try:
       k = open(cpabe_pk_location, "rb").read()
       return
@@ -158,7 +158,7 @@ def load_fetch_cpabe_pk(kms_url, cpabe_pk_location):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         pk_key = get_cpabe_pub_key(kms_url,debug=True)
+         pk_key = get_cpabe_pub_key(kms_url,debug=True, auth=auth)
          if pk_key == None:
             sys.exit("Could not fetch CPABE Public Key from KMS server({})".format(kms_url))
          return pk_key
@@ -171,7 +171,7 @@ def load_fetch_cpabe_pk(kms_url, cpabe_pk_location):
       return 
    sys.exit("Could not load or fetch CPABE Public Key")
 
-def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location):
+def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location, auth=None):
    try:
       k = open(cpabe_sk_location, "rb").read()
       return
@@ -179,7 +179,7 @@ def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         sk_key = get_org_cpabe_secret(kms_url,name)
+         sk_key = get_org_cpabe_secret(kms_url,name, auth=auth)
          if sk_key == None:
             sys.exit("Could not fetch CPABE Public Key({}) from KMS server({})".format(name,kms_url))
          return sk_key
@@ -192,11 +192,11 @@ def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location):
       return 
    sys.exit("Could not load or fetch CPABE Secret Key({})".format(name))
 
-def get_all_keys(kms_url, name, DE_key_location, ORE_key_location, cpabe_pk_location, cpabe_sk_location):
-   de = load_fetch_de_key(kms_url,DE_key_location)
-   ore = load_fetch_ore_key(kms_url,ORE_key_location)
-   abe_pk = load_fetch_cpabe_pk(kms_url,cpabe_pk_location)
-   abe_sk = load_fetch_cpabe_sk(kms_url,name, cpabe_sk_location)
+def get_all_keys(kms_url, name, DE_key_location, ORE_key_location, cpabe_pk_location, cpabe_sk_location, auth=None):
+   de = load_fetch_de_key(kms_url,DE_key_location, auth=auth)
+   ore = load_fetch_ore_key(kms_url,ORE_key_location, auth=auth)
+   abe_pk = load_fetch_cpabe_pk(kms_url,cpabe_pk_location, auth=auth)
+   abe_sk = load_fetch_cpabe_sk(kms_url,name, cpabe_sk_location, auth=auth)
 
    return {
             "de": de,
@@ -245,28 +245,47 @@ if __name__ == "__main__":
    config_f_name = "/config.yaml"#sys.argv[1] 
    output_f_name = "/output"
 
-   config_collector = load_yaml_file(config_f_name)
+   config_queryc = load_yaml_file(config_f_name)
    try:
-      DEBUG = config_collector["debug"]["enabled"]
+      DEBUG = config_queryc["debug"]["enabled"]
       if DEBUG:
          print("Debug: True.")
    except:
       DEBUG = False
 
    try:
-      ONLY_ONE = config_collector["debug"]["process_only_one"]
+      ONLY_ONE = config_queryc["debug"]["process_only_one"]
    except:
       ONLY_ONE = False
 
+# basic_auth = None
+   try:
+      basic_auth_user = config_queryc["basic_auth"]["user"]
+      try:
+         basic_auth_pass = config_queryc["basic_auth"]["pass"]
+         basic_auth = (basic_auth_user, basic_auth_pass)
+         print("Baic auth: enabled")
+      except:
+         exit("Baic auth: no password specified. Exiting.\n")
+   except:
+      print("Baic auth: disabled")
+      basic_auth = None
 
+
+   if basic_auth != None:
+      if not test_auth(config_queryc["kms"]["url"], basic_auth):
+         exit("Test failed: KMS basic auth. quiting.")
+      if not test_auth(config_queryc["backend_server"]["url"], basic_auth):
+         exit("Test failed: backend basic auth. quiting.")
 
    key_arguments = {
-                     "kms_url": config_collector["kms"]["url"],
-                     "name": config_collector["name"],
-                     "DE_key_location": config_collector["key_files"]["de"],
-                     "ORE_key_location": config_collector["key_files"]["ore"],
-                     "cpabe_pk_location": config_collector["key_files"]["cpabe_pub"],
-                     "cpabe_sk_location": config_collector["key_files"]["cpabe_secret"]
+                     "kms_url": config_queryc["kms"]["url"],
+                     "name": config_queryc["name"],
+                     "DE_key_location": config_queryc["key_files"]["de"],
+                     "ORE_key_location": config_queryc["key_files"]["ore"],
+                     "cpabe_pk_location": config_queryc["key_files"]["cpabe_pub"],
+                     "cpabe_sk_location": config_queryc["key_files"]["cpabe_secret"],
+                     "auth": basic_auth
                     }
    keychain = get_all_keys(**key_arguments)
 
@@ -274,11 +293,11 @@ if __name__ == "__main__":
 
    if DEBUG:
       print("#"*21 +" config " + "#"*21)
-      pprint(config_collector)
+      pprint(config_queryc)
       print("#"*50)
 
    try:
-      # query = config_collector["query"]
+      # query = config_queryc["query"]
       query = args.query
       print("query:", query)
 
@@ -286,12 +305,12 @@ if __name__ == "__main__":
       sys.exit("query must be defined.")
 
    try:
-      # from_time = config_collector["from_time"]
+      # from_time = config_queryc["from_time"]
       enc_from_time = encrypt_as_timestamp(args.from_time, keychain["ore"])
    except:
       enc_from_time = None
    try:
-      # to_time = config_collector["to_time"]
+      # to_time = config_queryc["to_time"]
       enc_to_time = encrypt_as_timestamp(args.to_time, keychain["ore"])
    except:
       enc_to_time = None
@@ -317,9 +336,9 @@ if __name__ == "__main__":
       traceback.print_exc()
       sys.exit("Failed to encrypt '{}'".format(query))
 
-   pickled_resp_data = query_enc_data(config_collector["backend_server"]["url"], 
+   pickled_resp_data = query_enc_data(config_queryc["backend_server"]["url"], 
                            enc_val, enc_from_time, enc_to_time,
-                           args.left_inclusive,args.right_inclusive, debug=DEBUG)
+                           args.left_inclusive,args.right_inclusive, debug=DEBUG, auth=basic_auth)
 
    if pickled_resp_data == None:
       sys.stderr.write("Failed to query data\n")

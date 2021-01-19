@@ -26,6 +26,7 @@ function print_help {
    echo
    echo -e 'Usage:'
    echo -e "  $0"' [Options] config-file query output-file'
+   echo -e "  $0"' --build --build-only'
    echo 
    echo -e 'Positional arguments:'
    echo -e '  config-file\t\tconfiguration file yaml'
@@ -171,12 +172,12 @@ while (( "$#" )); do
 done
 # set positional arguments in their proper place
 eval set -- "$POSITIONAL"
-if [ "$#" -eq 3 ]; then
+if [ "$#" -eq 3 ]&& [ $BUILD_ONLY -eq 0 ]; then
    CONFIG_FILE="$1"
    QUERY="$2"
    OUTPUT_FILE="$3"
    shift 3
-else
+elif [ $BUILD_ONLY -eq 0 ];then
    # echo $#
    # echo $POSITIONAL
    echo "Error: Missing positional arguments." >&2

@@ -6,18 +6,17 @@
 
 # name must not contain special characters like spaces, /
 # alpha numeric only, -, _
-name: "official_org_name" 
+name: "Public" 
 
 # uncomment the following when usgin basic authentication with the server
-# basic_auth:
-#   user: test_user1
-#   pass: ksyhfkjlashlkfjahsfa
+basic_auth:
+  user: johndoe
+  pass: AKkmyqnJvR5SsRzNn8eF
 
 kms:
-  url: "http://192.168.1.101:5002"
+  url: "https://cybexp-priv.ignaciochg.com:5002"
 backend_server:
-  url: "http://192.168.1.101:5001"
-  #max_post_retries: 5 # deprecated
+  url: "https://cybexp-priv.ignaciochg.com:5001"
 
 
 ####################################
