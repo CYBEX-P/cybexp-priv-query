@@ -30,7 +30,7 @@ function print_help {
    echo 
    echo -e 'Positional arguments:'
    echo -e '  config-file\t\tconfiguration file yaml'
-   echo -e '  query\t\t\tstring replesenting any query value'
+   echo -e '  query\t\t\tstring representing any query value'
    echo -e '  output-file\t\tfile where the unencrypted information is placed'
    echo
    echo -e 'Options arguments:'
