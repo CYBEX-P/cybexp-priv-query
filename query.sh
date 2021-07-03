@@ -9,8 +9,11 @@ DOCKERFILE_LOC=$FULL_PATH
 
 OG_ARGUMENTS="$@" # in case we need to exec when starting docker
 
+ALLOWED_QUERY_TYPES=('search' 'count')
+
+
 if [ "`id -u`" -eq "0" ]; then
-   echo "Not recomended to run ar root. Continuing anyways..."
+   echo "Not recomended to run as root. Continuing anyways..."
 fi
 if [[ "`groups`" == *"docker"* || "`id -u`" -eq "0" ]]; then
       DOCKER="docker"
@@ -36,7 +39,10 @@ function print_help {
    echo -e 'Options arguments:'
    echo -e '  -b, --build\t\tbuild docker image'
    echo -e '  --build-only\t\texit after building'
-   echo -e '  -s, --shell\t\trun shell, ignores most flags'
+   echo -e '  -s, --shell\t\trun shell (mostly for debugging), ignores most flags'
+
+   echo -e '  -q, --query-type TYPE\tChange query type, TYPE must be one of'
+   echo -e "                       \tthe following: ${ALLOWED_QUERY_TYPES[*]}. (default: search)"
 
    echo -e '  -f, --from-time EPOCH\tinteger epoch used as > filter for the query'
    echo -e '  -t, --to-time EPOCH\tinteger epoch used as < filter for the query'
@@ -59,7 +65,7 @@ function build_image {
 }
 
 function run_image {
-   other_args="$QUERY"
+   other_args="$QUERY --query-type $QUERY_TYPE"
    # touch $OUTPUT_FILE
    if [ $LEFT_INCLUSIVE -eq 1 ]; then
       other_args="$other_args --left-inclusive"
@@ -106,6 +112,7 @@ SHELL_ONLY=0
 CLEANUP=0
 LEFT_INCLUSIVE=0
 RIGHT_INCLUSIVE=0
+QUERY_TYPE=search
 
 POSITIONAL=""
 while (( "$#" )); do
@@ -153,6 +160,20 @@ while (( "$#" )); do
       -t|--to-time)
          if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             TO_TIME=$2
+            shift 2
+         else
+            echo "Error: Argument for $1 is missing" >&2
+            print_help
+            exit 1
+         fi
+         ;;
+      -q|--query-type)
+         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            QUERY_TYPE=$2
+            if [[ " ${ALLOWED_QUERY_TYPES[*]} " != *"$QUERY_TYPE"* ]]; then
+                echo "argument -q/--query-type: invalid choice: '$QUERY_TYPE' (choose from: ${ALLOWED_QUERY_TYPES[*]})"
+                exit 1
+            fi
             shift 2
          else
             echo "Error: Argument for $1 is missing" >&2

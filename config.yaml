@@ -4,20 +4,20 @@
 ######### Configure these ##########
 ####################################
 
-# name must not contain special characters like spaces, /
-# alpha numeric only, -, _
-name: "official_org_name" 
+# Use /login endpoint@KMS to get kms_access_key
+# Alternatively use provided login script
+# kms_access_key: "kms_access_key" 
+kms_access_key: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTYyNTI1MTgzNCwianRpIjoiMDc1ODMwMDQtNDM1Yy00ZmY2LWE2MGQtODMxY2VmMGFjNzJiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6InRlc3QiLCJuYmYiOjE2MjUyNTE4MzR9.BvHZTyU8A5IaJp8XPgIKyXSX8t8qoYo_5CN9C6ksiRU" 
 
-# uncomment the following when usgin basic authentication with the server
+# uncomment the following (3 lines) when using basic authentication with the server
 # basic_auth:
-#   user: test_user1
-#   pass: ksyhfkjlashlkfjahsfa
+#   user: 'username_here'
+#   pass: 'password_here'
 
 kms:
   url: "http://192.168.1.101:5002"
 backend_server:
   url: "http://192.168.1.101:5001"
-  #max_post_retries: 5 # deprecated
 
 
 ####################################
@@ -25,8 +25,9 @@ backend_server:
 ####################################
 
 debug: 
-  enabled: False
+  vebose: True
   process_only_one: False
+
   
 
 ####################################
@@ -38,22 +39,4 @@ key_files:
   ore: /secrets/ore.bin
   cpabe_pub: /secrets/cpabe_pub.bin
   cpabe_secret: /secrets/cpabe_secret.bin
-
-
-
-
-
-####################################
-############# Query ################
-########### Deprecated #############
-####################################
-
-# # query: "165.227.91.185"
-# query: "test"
-# # times in UNIX int
-# from_time: 1
-# to_time: 5000
-
-# inclusive_left: False
-# inclusive_right: False
 

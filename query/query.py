@@ -108,7 +108,7 @@ def decrypt_record(record, pk, sk, debug=False):
    return new_record
 
 
-def load_fetch_de_key(kms_url, DE_key_location, auth=None):
+def load_fetch_de_key(kms_url,kms_access_key, DE_key_location, auth=None):
    try:
       k = open(DE_key_location, "rb").read()
       return
@@ -116,7 +116,7 @@ def load_fetch_de_key(kms_url, DE_key_location, auth=None):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         de_key = get_de_key(kms_url, auth=auth)
+         de_key = get_de_key(kms_url,kms_access_key, auth=auth)
          if de_key == None:
             sys.exit("Could not fetch DE key from KMS server({})".format(kms_url))
          return de_key
@@ -129,7 +129,7 @@ def load_fetch_de_key(kms_url, DE_key_location, auth=None):
       return 
    sys.exit("Could not load or fetch DE key")
 
-def load_fetch_ore_key(kms_url, ORE_key_location, auth=None):
+def load_fetch_ore_key(kms_url,kms_access_key, ORE_key_location, auth=None):
    try:
       k = open(ORE_key_location, "rb").read()
       return
@@ -137,7 +137,7 @@ def load_fetch_ore_key(kms_url, ORE_key_location, auth=None):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         ore_key = get_ore_key(kms_url, auth=auth)
+         ore_key = get_ore_key(kms_url,kms_access_key, auth=auth)
          if ore_key == None:
             sys.exit("Could not fetch ORE key from KMS server({})".format(kms_url))
          return ore_key
@@ -150,7 +150,7 @@ def load_fetch_ore_key(kms_url, ORE_key_location, auth=None):
       return 
    sys.exit("Could not load or fetch ORE key")
 
-def load_fetch_cpabe_pk(kms_url, cpabe_pk_location, auth=None):
+def load_fetch_cpabe_pk(kms_url,kms_access_key, cpabe_pk_location, auth=None):
    try:
       k = open(cpabe_pk_location, "rb").read()
       return
@@ -158,7 +158,7 @@ def load_fetch_cpabe_pk(kms_url, cpabe_pk_location, auth=None):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         pk_key = get_cpabe_pub_key(kms_url,debug=True, auth=auth)
+         pk_key = get_cpabe_pub_key(kms_url,kms_access_key,debug=True, auth=auth)
          if pk_key == None:
             sys.exit("Could not fetch CPABE Public Key from KMS server({})".format(kms_url))
          return pk_key
@@ -171,7 +171,7 @@ def load_fetch_cpabe_pk(kms_url, cpabe_pk_location, auth=None):
       return 
    sys.exit("Could not load or fetch CPABE Public Key")
 
-def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location, auth=None):
+def load_fetch_cpabe_sk(kms_url, kms_access_key, cpabe_sk_location, auth=None):
    try:
       k = open(cpabe_sk_location, "rb").read()
       return
@@ -179,24 +179,24 @@ def load_fetch_cpabe_sk(kms_url, name, cpabe_sk_location, auth=None):
       raise KeyboardInterrupt
    except FileNotFoundError:
       try:
-         sk_key = get_org_cpabe_secret(kms_url,name, auth=auth)
+         sk_key = get_org_cpabe_secret(kms_url,kms_access_key, auth=auth)
          if sk_key == None:
-            sys.exit("Could not fetch CPABE Public Key({}) from KMS server({})".format(name,kms_url))
+            sys.exit("Could not fetch CPABE Public Key from KMS server({})".format(kms_url))
          return sk_key
       except KeyboardInterrupt:
          raise KeyboardInterrupt
       except:
          traceback.print_exc()
-         sys.exit("Could not fetch CPABE Public Key({}) from KMS server({})".format(name,kms_url))
+         sys.exit("Could not fetch CPABE Public Key from KMS server({})".format(kms_url))
       open(cpabe_sk_location, "wb").write(sk_key)
       return 
-   sys.exit("Could not load or fetch CPABE Secret Key({})".format(name))
+   sys.exit("Could not load or fetch CPABE Secret Key")
 
-def get_all_keys(kms_url, name, DE_key_location, ORE_key_location, cpabe_pk_location, cpabe_sk_location, auth=None):
-   de = load_fetch_de_key(kms_url,DE_key_location, auth=auth)
-   ore = load_fetch_ore_key(kms_url,ORE_key_location, auth=auth)
-   abe_pk = load_fetch_cpabe_pk(kms_url,cpabe_pk_location, auth=auth)
-   abe_sk = load_fetch_cpabe_sk(kms_url,name, cpabe_sk_location, auth=auth)
+def get_all_keys(kms_url, kms_access_key, DE_key_location, ORE_key_location, cpabe_pk_location, cpabe_sk_location, auth=None):
+   de = load_fetch_de_key(kms_url,kms_access_key,DE_key_location, auth=auth)
+   ore = load_fetch_ore_key(kms_url,kms_access_key,ORE_key_location, auth=auth)
+   abe_pk = load_fetch_cpabe_pk(kms_url,kms_access_key,cpabe_pk_location, auth=auth)
+   abe_sk = load_fetch_cpabe_sk(kms_url,kms_access_key, cpabe_sk_location, auth=auth)
 
    return {
             "de": de,
@@ -211,6 +211,12 @@ def create_parser():
 
    parser.add_argument('query', metavar='QUERY', type=str,
                        help='query in plaintext')
+
+   parser.add_argument('-q','--query-type', dest='query_type', 
+                       default="search", nargs='?',
+                       const="search" ,
+                       choices=['search', 'count'],
+                       help='Select type of query (default: %(default)s)')
 
    parser.add_argument('-f','--from-time', metavar='FROM', type=int,
                        default=None, dest='from_time',
@@ -241,7 +247,7 @@ if __name__ == "__main__":
    parser = create_parser()
    args = parser.parse_args()
 
-   print(sys.argv)
+   # print(sys.argv)
    config_f_name = "/config.yaml"#sys.argv[1] 
    output_f_name = "/output"
 
@@ -280,7 +286,7 @@ if __name__ == "__main__":
 
    key_arguments = {
                      "kms_url": config_queryc["kms"]["url"],
-                     "name": config_queryc["name"],
+                     "kms_access_key": config_queryc["kms_access_key"],
                      "DE_key_location": config_queryc["key_files"]["de"],
                      "ORE_key_location": config_queryc["key_files"]["ore"],
                      "cpabe_pk_location": config_queryc["key_files"]["cpabe_pub"],
@@ -337,11 +343,15 @@ if __name__ == "__main__":
       sys.exit("Failed to encrypt '{}'".format(query))
 
    pickled_resp_data = query_enc_data(config_queryc["backend_server"]["url"], 
-                           enc_val, enc_from_time, enc_to_time,
+                           enc_val, args.query_type,
+                           enc_from_time, enc_to_time,
                            args.left_inclusive,args.right_inclusive, debug=DEBUG, auth=basic_auth)
 
+   # if DEBUG:
+   #    sys.stdout.flush()
+
    if pickled_resp_data == None:
-      sys.stderr.write("Failed to query data\n")
+      sys.stderr.write("Failed to query server for data\n")
       sys.exit(1)
 
    resp_data = pickle.loads(pickled_resp_data)
@@ -350,28 +360,39 @@ if __name__ == "__main__":
       pprint(pickled_resp_data)
       print("unpickled:", resp_data)
 
-   try:
-      with open(output_f_name, "w") as output_file:
-         for record in resp_data:
-            try:  
-               # pprint(record)
-               dec_record = decrypt_record(record, keychain["pk"], keychain["sk"], debug=DEBUG)
-               # print(record["cpabe_offset"])
+   if args.query_type == "search":
+      try:
+         with open(output_f_name, "w") as output_file:
+            for record in resp_data:
+               try:  
+                  # pprint(record)
+                  dec_record = decrypt_record(record, keychain["pk"], keychain["sk"], debug=DEBUG)
+                  # print(record["cpabe_offset"])
 
-               if dec_record != {}:
-                  output_file.write(json.dumps(dec_record)+'\n')
-               if DEBUG:
-                  print(json.dumps(dec_record))
-               if ONLY_ONE:
-                  break
-            except:
-               traceback.print_exc()
-               sys.stdout.flush()
-               continue
-   except:
-      sys.stderr.write("Could not open output file.")
-      sys.exit(1)
+                  if dec_record != {}:
+                     output_file.write(json.dumps(dec_record)+'\n')
+                  if DEBUG:
+                     print(json.dumps(dec_record))
+                  if ONLY_ONE:
+                     break
+               except:
+                  traceback.print_exc()
+                  sys.stdout.flush()
+                  continue
+      except:
+         sys.stderr.write("Could not open output file.")
+         sys.exit(1)
+   elif args.query_type == "count":
+      try:
+         print("Count: {}".format(resp_data["count"]))
+         with open(output_f_name, "w") as output_file:
+            output_file.write("Count: {}\n".format(resp_data["count"]))
 
+      except:
+         sys.stderr.write("Bad response from server.")
+         sys.exit(1)
+
+   
 
 
 
