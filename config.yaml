@@ -37,6 +37,7 @@ debug:
 key_files:
   de: /secrets/de.bin
   ore: /secrets/ore.bin
+  ore_params: /secrets/ore_params.bin
   cpabe_pub: /secrets/cpabe_pub.bin
   cpabe_secret: /secrets/cpabe_secret.bin
 

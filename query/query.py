@@ -5,7 +5,7 @@ sys.path.append("/priv-libs/libs")
 from de import RSADOAEP
 from ORE import *
 from cpabew import CPABEAlg
-from web_client import get_de_key, get_ore_key, get_cpabe_pub_key, get_org_cpabe_secret, query_enc_data, test_auth
+from web_client import get_de_key, get_ore_key,get_ore_params, get_cpabe_pub_key, get_org_cpabe_secret, query_enc_data, test_auth
 from priv_common import load_yaml_file
 
 from tqdm import tqdm
@@ -64,21 +64,43 @@ def encrypt_as_de(dat,key):
    except:
       traceback.print_exc()
       return None
-def encrypt_as_timestamp(dat,key):
-   try:
-      if dat == None:
+# def encrypt_as_timestamp(dat,key):
+#    try:
+#       if dat == None:
+#          return None
+#       if type(dat) != int:
+#          dat = _str_to_epoch(dat)
+#       if type(dat) == int and dat > 0:
+#          return OREComparable.from_int(dat,key).get_cipher_obj().export()
+#       else:
+#          return None
+#    except KeyboardInterrupt:
+#       raise KeyboardInterrupt
+#    except:
+#       traceback.print_exc()
+#       return None
+
+def encrypt_as_timestamp(dat,key, params, debug=False):
+   global DEBUG_POLICY_PARCER
+   if DEBUG_POLICY_PARCER:
+      return "ORE_encrypted"
+   else:
+      try:
+         if type(dat) != int:
+            dat = _str_to_epoch(dat)
+         if type(dat) == int and dat > 0:
+            cipher = OREcipher(key, params)
+            return cipher.encrypt(dat)
+         else:
+            return None
+      except KeyboardInterrupt:
+         raise KeyboardInterrupt
+      except:
+         # if debug:
+         #    traceback.print_exc()
+         # traceback.print_exc()
          return None
-      if type(dat) != int:
-         dat = _str_to_epoch(dat)
-      if type(dat) == int and dat > 0:
-         return OREComparable.from_int(dat,key).get_cipher_obj().export()
-      else:
-         return None
-   except KeyboardInterrupt:
-      raise KeyboardInterrupt
-   except:
-      traceback.print_exc()
-      return None
+
 def decrypt_cpabe(ciphertext, pk, sk):
    try:
       bsw07 = CPABEAlg()
@@ -150,6 +172,27 @@ def load_fetch_ore_key(kms_url,kms_access_key, ORE_key_location, auth=None):
       return 
    sys.exit("Could not load or fetch ORE key")
 
+def load_fetch_ore_params(kms_url,kms_access_key, ORE_params_location, auth=None):
+   try:
+      k = open(ORE_params_location, "rb").read()
+      return
+   except KeyboardInterrupt:
+      raise KeyboardInterrupt
+   except FileNotFoundError:
+      try:
+         ore_key = get_ore_params(kms_url,kms_access_key, auth=auth)
+         if ore_key == None:
+            sys.exit("Could not fetch ORE parameters from KMS server({})".format(kms_url))
+         return ore_key
+      except KeyboardInterrupt:
+         raise KeyboardInterrupt
+      except:
+         # traceback.print_exc()
+         sys.exit("Could not fetch ORE parameters from KMS server({})".format(kms_url))
+      open(ORE_params_location, "wb").write(ore_key)
+      return 
+   sys.exit("Could not load or fetch ORE parameters")
+
 def load_fetch_cpabe_pk(kms_url,kms_access_key, cpabe_pk_location, auth=None):
    try:
       k = open(cpabe_pk_location, "rb").read()
@@ -192,9 +235,10 @@ def load_fetch_cpabe_sk(kms_url, kms_access_key, cpabe_sk_location, auth=None):
       return 
    sys.exit("Could not load or fetch CPABE Secret Key")
 
-def get_all_keys(kms_url, kms_access_key, DE_key_location, ORE_key_location, cpabe_pk_location, cpabe_sk_location, auth=None):
+def get_all_keys(kms_url, kms_access_key, DE_key_location, ORE_key_location,ORE_params_location, cpabe_pk_location, cpabe_sk_location, auth=None):
    de = load_fetch_de_key(kms_url,kms_access_key,DE_key_location, auth=auth)
    ore = load_fetch_ore_key(kms_url,kms_access_key,ORE_key_location, auth=auth)
+   ore_params = load_fetch_ore_params(kms_url,kms_access_key,ORE_params_location, auth=auth)
    abe_pk = load_fetch_cpabe_pk(kms_url,kms_access_key,cpabe_pk_location, auth=auth)
    abe_sk = load_fetch_cpabe_sk(kms_url,kms_access_key, cpabe_sk_location, auth=auth)
 
@@ -289,6 +333,7 @@ if __name__ == "__main__":
                      "kms_access_key": config_queryc["kms_access_key"],
                      "DE_key_location": config_queryc["key_files"]["de"],
                      "ORE_key_location": config_queryc["key_files"]["ore"],
+                     "ORE_params_location": config_queryc["key_files"]["ore_params"],
                      "cpabe_pk_location": config_queryc["key_files"]["cpabe_pub"],
                      "cpabe_sk_location": config_queryc["key_files"]["cpabe_secret"],
                      "auth": basic_auth
