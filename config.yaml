@@ -7,7 +7,7 @@
 # Use /login endpoint@KMS to get kms_access_key
 # Alternatively use provided login script
 # kms_access_key: "kms_access_key" 
-kms_access_key: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTYyNTI1MTgzNCwianRpIjoiMDc1ODMwMDQtNDM1Yy00ZmY2LWE2MGQtODMxY2VmMGFjNzJiIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6InRlc3QiLCJuYmYiOjE2MjUyNTE4MzR9.BvHZTyU8A5IaJp8XPgIKyXSX8t8qoYo_5CN9C6ksiRU" 
+kms_access_key: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTYyNTU5MTc4MiwianRpIjoiYzU5MTcwMjItZTUyNi00Y2M1LWE2YzgtNmM5MWMzZTVlMjNkIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6InRlc3QyIiwibmJmIjoxNjI1NTkxNzgyfQ.F1TrcphwY1OnmnWV5HbZElW3sctuHxsHIGbfy13qMhU" 
 
 # uncomment the following (3 lines) when using basic authentication with the server
 # basic_auth:

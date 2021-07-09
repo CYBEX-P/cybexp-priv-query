@@ -81,16 +81,18 @@ function run_image {
       other_args="$other_args --to-time $TO_TIME"
    fi
    echo "config file: $CONFIG_FILE"
-   CONT_ID=$($DOCKER run -d -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ -it $IMAGE_NAME $other_args)
+   CONT_ID=$($DOCKER run -d -v `realpath $CONFIG_FILE`:/config.yaml:ro -v $FULL_PATH/secrets:/secrets/ -it $IMAGE_NAME $other_args)
    $DOCKER logs -f $CONT_ID
+   echo "Copying output file from container..."
    $DOCKER cp $CONT_ID:/output `realpath $OUTPUT_FILE`   > /dev/null 2>&1 # supress output
    sudo chown $USER:$USER `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
    return $?
 }
 function run_shell {
    touch $OUTPUT_FILE
-   $DOCKER run  -v `realpath $CONFIG_FILE`:/config.yaml -v $FULL_PATH/secrets:/secrets/ --entrypoint /bin/bash -it $IMAGE_NAME
+   $DOCKER run  -v `realpath $CONFIG_FILE`:/config.yaml:ro -v $FULL_PATH/secrets:/secrets/ --entrypoint /bin/bash -it $IMAGE_NAME
    CONT_ID=`$DOCKER ps --all | grep $IMAGE_NAME | awk '{print $1}' | head -n 1`
+   echo "Copying output file from container..."
    $DOCKER cp $CONT_ID:/output `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
    sudo chown $USER:$USER `realpath $OUTPUT_FILE` > /dev/null 2>&1 # supress output
 
