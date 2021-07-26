@@ -1,5 +1,8 @@
-https://alexmarquardt.com/2017/03/02/trade-offs-to-consider-when-storing-binary-data-in-mongodb/
+# Privacy Query Module
+For information on installation and usage please visit [Enrypted Analytics Documentation](https://cybex.cse.unr.edu/docs/encrypted-analytics/) or visit the [doucumentation source](https://github.com/CYBEX-P/priv-docs).
 
-### export docker image
-https://stackoverflow.com/a/48856787/12044480
-https://stackoverflow.com/a/31610099/12044480
+# Dependencies
+This project depends on:   
+- Docker
+- Docker-Compose
+- [Priv-libs module](https://github.com/CYBEX-P/cybexp-priv-libs)
